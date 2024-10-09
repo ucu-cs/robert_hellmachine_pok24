@@ -12,4 +12,7 @@ This project builds on what previous student groups have done, aiming to improve
 | Hight           | +- 0.3 m    |
 <!--| Acum Capacity   | +- ??? Ah   |
 | Distance Ctrls. | +- ??? m    |-->  
-|                 |             |
+Previous ideas and work: 
+https://github.com/ucu-computer-science/hell_machine/blob/master/README.md
+
+https://github.com/SmalRat/Hell-machine-revived/tree/main
