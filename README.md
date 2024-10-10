@@ -16,3 +16,5 @@ Previous ideas and work:
 https://github.com/ucu-computer-science/hell_machine/blob/master/README.md
 
 https://github.com/SmalRat/Hell-machine-revived/tree/main
+
+![hell_machine drawio](https://github.com/user-attachments/assets/b687a504-552a-4545-8ec3-e9a5273073a5)
