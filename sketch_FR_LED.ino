@@ -160,7 +160,7 @@ void setup() {
   controller.begin(controllerSerial);
   Serial.println("Initialization complete");
 
-  Serial.printf("code number: 4\n");
+  Serial.printf("code number: 1\n");
 }
 
 
@@ -181,9 +181,9 @@ void loop() {
 
 
   target_motor_speed = get_target_motor_speed();
-  braking = is_braking(current_motor_speed, target_motor_speed);
+  braking = is_braking(direction, current_motor_speed, target_motor_speed);
   if (current_motor_speed == 0 && target_motor_speed > 0) {
-    int backwards_speed_at_start = 5;
+    int backwards_speed_at_start = 30;
     set_motor_speed(backwards_speed_at_start);
   }
   current_motor_speed = updated_value(current_motor_speed, target_motor_speed, acceleration_motor_step);
@@ -191,19 +191,30 @@ void loop() {
 
   inverse_wheel_rotation = get_wheel_rotation_type();
 
+
+  turn = 1;
   target_rotation_speed = get_target_rotation_speed();
   if (rotation_is_changed(current_rotation_speed, target_rotation_speed)) {
     led_no_turn();
   }
   current_rotation_speed = target_rotation_speed;
-  set_rotation(current_rotation_speed);
+  if (direction != 0) {
+    set_rotation(current_rotation_speed);
+  }
+
+  // target_rotation_speed = get_target_rotation_speed();
+  // if (rotation_is_changed(current_rotation_speed, target_rotation_speed)) {
+  //   led_no_turn();
+  // }
+  // current_rotation_speed = target_rotation_speed;
+  // set_rotation(current_rotation_speed);
 
 
-  // Serial.printf("target_motor_speed: %d\n2\n", target_motor_speed);
-  // Serial.printf("current_motor_speed: %d\n", current_motor_speed);
+  Serial.printf("target_motor_speed: %d\n2\n", target_motor_speed);
+  Serial.printf("current_motor_speed: %d\n", current_motor_speed);
 
-  // Serial.printf("target_rotation_speed: %d\n", target_rotation_speed);
-  // Serial.printf("current_rotation_speed: %d\n", current_rotation_speed);
+  Serial.printf("target_rotation_speed: %d\n", target_rotation_speed);
+  Serial.printf("current_rotation_speed: %d\n", current_rotation_speed);
 
 
   update_led();
@@ -275,22 +286,23 @@ bool no_controller_connection() {
 
 void update_direction(int direction_data) {
   if (direction_data <= MIN_CHANNEL_VALUE + 100) {
-    braking = false;
     direction = 1;
     turn = 1;
   } else if (direction_data >= MAX_CHANNEL_VALUE - 100) {
-    braking = true;
     direction = -1;
     turn = 1;
   } else {
-    braking = false;
     direction = 0;
     turn = 0;
   }
 }
 
-bool is_braking(int motor_speed, int target_motor_speed) {
-  return motor_speed > target_motor_speed + 3;
+bool is_moving(int direction) {
+  return direction != 0;
+}
+
+bool is_braking(int direction, int motor_speed, int target_motor_speed) {
+  return direction == -1 || motor_speed > target_motor_speed + 3;
 }
 
 int updated_value(int value, int target_value, int increment_step) {
@@ -310,7 +322,7 @@ void set_motor_speed(int motor_speed) {
 }
 
 bool rotation_is_changed(int value, int target_value) {
-  return value > 0 ^ target_value > 0;
+  return (value > 0) && (target_value < 0) || (value < 0) && (target_value > 0);
 }
 
 void set_rotation(int rotation_speed) {
@@ -357,8 +369,6 @@ void update_led() {
   if (braking) {
     led_braking();
   }
-  turn = 1;
-  current_rotation_speed = get_target_rotation_speed();
   if (current_rotation_speed > 0) {
     led_turn_right();
   } else if (current_rotation_speed < 0) {
@@ -394,9 +404,10 @@ void led_no_turn() {
 }
 
 void update_animation() {
-  if (animation_timer == 0) {
+  if (animation_timer <= 0) {
     animation_timer = animation_delay;
     ++current_num_turning_pixels;
+
 
     if (current_num_turning_pixels == NUM_PIXELS_HALF) {
       animation_timer = restarting_animation_delay;
