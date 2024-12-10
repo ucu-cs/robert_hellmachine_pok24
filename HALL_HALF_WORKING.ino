@@ -21,9 +21,7 @@ AS5600 sensor_f(&Wire_f);   //  use default Wire
 AS5600 sensor_b(&Wire_b);   //  use default Wire
 
 
-
 // Constants for engine control pins
-
 constexpr int ALL_ENGINE_BRAKE_PIN = 45;
 constexpr int ALL_ENGINE_SPEED_CONTROL_PIN = 35;
 constexpr int ALL_ENGINE_DIRECTION_CONTROL_PIN = 37;
@@ -56,7 +54,7 @@ constexpr int BACKWARD_MAX_ROTATION_SPEED = - MAX_ROTATION_SPEED;
 #define PIN_RX 18
 #define PIN_TX 17
 
-HardwareSerial controllerSerial(2);
+HardwareSerial controllerSerial(1);
 AlfredoCRSF controller;
 
 
@@ -70,7 +68,7 @@ constexpr int BRAKE_CHANNEL = 7;
 constexpr int RESET_CHANNEL = 8;
 
 
-// Channel values
+`// Channel values
 
 constexpr int MAX_CHANNEL_VALUE = 2010;
 constexpr int MIN_CHANNEL_VALUE = 990;
@@ -198,6 +196,8 @@ void setup() {
 
 //   rotation_angle_b = get_angle_b();
 //   rotation_angle_f = get_angle_f();
+
+
 //   reset_wheels_angle();
   controllerSerial.begin(CRSF_BAUDRATE, SERIAL_8N1, PIN_RX, PIN_TX);
   if (!controllerSerial) while (1) Serial.println("Invalid controllerSerial configuration");
@@ -216,7 +216,7 @@ void loop() {
   // printChannels();
 
 
-  Serial.printf("sensor_f angle9: %d\n", get_angle_f());
+  Serial.printf("sensor_f angle1: %d\n", get_angle_f());
   Serial.printf("sensor_b angle: %d\n", get_angle_b());
 
 
@@ -264,6 +264,9 @@ void loop() {
   if (direction != 0) {
     set_rotation(current_rotation_speed);
   }
+  rotation_angle_f = get_angle_f();
+  rotation_angle_b = get_angle_b();
+  
 
   // target_rotation_speed = get_target_rotation_speed();
   // if (rotation_is_changed(current_rotation_speed, target_rotation_speed)) {
@@ -273,11 +276,11 @@ void loop() {
   // set_rotation(current_rotation_speed);
 
 
-  Serial.printf("target_motor_speed: %d\n2\n", target_motor_speed);
-  Serial.printf("current_motor_speed: %d\n", current_motor_speed);
+  // Serial.printf("target_motor_speed: %d\n2\n", target_motor_speed);
+  // Serial.printf("current_motor_speed: %d\n", current_motor_speed);
 
-  Serial.printf("target_rotation_speed: %d\n", target_rotation_speed);
-  Serial.printf("current_rotation_speed: %d\n", current_rotation_speed);
+  // Serial.printf("target_rotation_speed: %d\n", target_rotation_speed);
+  // Serial.printf("current_rotation_speed: %d\n", current_rotation_speed);
 
 
   update_led();
@@ -306,7 +309,7 @@ void reset_wheels_angle_f() {
     while (rotation_angle_f > deadzone_rotation_angle) {
         rotation_angle_f = get_angle_f();
     }
-  } else {
+  } else if (rotation_angle_f < -deadzone_rotation_angle - 10) {
     turn_right_f();
     while (rotation_angle_f < -deadzone_rotation_angle) {
         rotation_angle_f = get_angle_f();
@@ -321,7 +324,7 @@ void reset_wheels_angle_b() {
     while (rotation_angle_b > deadzone_rotation_angle) {
         rotation_angle_b = get_angle_b();
     }
-  } else {
+  } else if (rotation_angle_b < -deadzone_rotation_angle - 10) {
     turn_right_b();
     while (rotation_angle_b < -deadzone_rotation_angle) {
         rotation_angle_b = get_angle_b();
@@ -337,15 +340,14 @@ int apply_deadzone(int value, int deadzone, int replacing_value){
   return value;
 }
 
-
 int get_wheel_rotation_type() {
   return controller.getChannel(ROTATION_TYPE_CHANNEL) <= MIDDLE_CHANNEL_VALUE - 100;
 }
 
-
 int get_target_motor_speed() {
   forward_reversed_data = constrain(controller.getChannel(SPEED_CHANNEL), MIN_CHANNEL_VALUE, MAX_CHANNEL_VALUE);
-  forward_reversed_data = map(forward_reversed_data, MIN_CHANNEL_VALUE, MAX_CHANNEL_VALUE, 0, MAX_MOTOR_SPEED) * direction;
+  forward_reversed_datasensor_f angle1: -2136
+ = map(forward_reversed_data, MIN_CHANNEL_VALUE, MAX_CHANNEL_VALUE, 0, MAX_MOTOR_SPEED) * direction;
   return apply_deadzone(forward_reversed_data, DEADZONE_MOTOR_SPEED, STOP_MOTOR_SPEED);
 }
 
@@ -360,7 +362,6 @@ int get_target_rotation_speed() {
 bool no_controller_connection() {
   return controller.getChannel(SPEED_CHANNEL) < MIN_CHANNEL_VALUE - 200;
 }
-
 
 
 void update_direction(int direction_data) {
@@ -607,7 +608,6 @@ void block_wheels() {
 }
 
 
-//Use controller.getChannel(x) to get us channel values (1-16).
 void printChannels()
 {
   for (int ChannelNum = 1; ChannelNum <= 12; ChannelNum++)
