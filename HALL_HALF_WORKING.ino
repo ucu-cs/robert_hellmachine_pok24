@@ -36,7 +36,7 @@ constexpr int ROTATION_SPEED_RIGHT_PIN_B = 8;
 
 // Speed constants
 
-int acceleration_motor_step = 5;
+int acceleration_motor_step = 10;
 int acceleration_rotation_step = 5;
 int DEADZONE_MOTOR_SPEED = 10;
 int DEADZONE_ROTATION_SPEED = 10;
@@ -51,10 +51,10 @@ constexpr int BACKWARD_MAX_ROTATION_SPEED = - MAX_ROTATION_SPEED;
 
 // ELRS setup
 
-#define PIN_RX 18
-#define PIN_TX 17
+#define PIN_RX 16
+#define PIN_TX 7
 
-HardwareSerial controllerSerial(1);
+HardwareSerial controllerSerial(2);
 AlfredoCRSF controller;
 
 
@@ -68,7 +68,7 @@ constexpr int BRAKE_CHANNEL = 7;
 constexpr int RESET_CHANNEL = 8;
 
 
-`// Channel values
+// Channel values
 
 constexpr int MAX_CHANNEL_VALUE = 2010;
 constexpr int MIN_CHANNEL_VALUE = 990;
@@ -93,7 +93,7 @@ int deadzone_rotation_angle = 50;
 
 
 
-int max_angle_difference = 50;
+int max_angle_difference = 100;
 
 
 
@@ -194,18 +194,18 @@ void setup() {
   Serial.print("Connect_sensor_f: ");
   Serial.println(f);
 
-//   rotation_angle_b = get_angle_b();
-//   rotation_angle_f = get_angle_f();
+  rotation_angle_b = get_angle_b();
+  rotation_angle_f = get_angle_f();
 
 
-//   reset_wheels_angle();
+  reset_wheels_angle();
   controllerSerial.begin(CRSF_BAUDRATE, SERIAL_8N1, PIN_RX, PIN_TX);
   if (!controllerSerial) while (1) Serial.println("Invalid controllerSerial configuration");
 
   controller.begin(controllerSerial);
   Serial.println("Initialization complete");
 
-  Serial.printf("code number: 1\n");
+  Serial.printf("code number: 2\n");
   delay(100);
 }
 
@@ -232,7 +232,7 @@ void loop() {
     max_rotation_angle = 5000;
   }
   else {
-    max_rotation_angle = 1700;
+    max_rotation_angle = 1500;
   }
 
 
@@ -298,20 +298,30 @@ int get_angle_b() {
 }
 
 void reset_wheels_angle() {
+  rotation_angle_b = get_angle_b();
+  rotation_angle_f = get_angle_f();
+
+  Serial.println("centering forward");
   reset_wheels_angle_f();
+  Serial.println("centering backward");
   reset_wheels_angle_b();
 }
 
 
 void reset_wheels_angle_f() {
+  Serial.printf("rotation_angle_f: %d\n", rotation_angle_f);
   if (rotation_angle_f > deadzone_rotation_angle + 10) {
+    Serial.println("to left");
     turn_left_f();
     while (rotation_angle_f > deadzone_rotation_angle) {
+      Serial.printf("angle_f: %d\n", get_angle_f());
         rotation_angle_f = get_angle_f();
     }
   } else if (rotation_angle_f < -deadzone_rotation_angle - 10) {
+    Serial.println("to right");
     turn_right_f();
     while (rotation_angle_f < -deadzone_rotation_angle) {
+      Serial.printf("angle_f: %d\n", get_angle_f());
         rotation_angle_f = get_angle_f();
     }
   }
@@ -319,14 +329,19 @@ void reset_wheels_angle_f() {
 }
 
 void reset_wheels_angle_b() {
+  Serial.printf("rotation_angle_b: %d\n", rotation_angle_b);
   if (rotation_angle_b > deadzone_rotation_angle + 10) {
+    Serial.println("to left");
     turn_left_b();
     while (rotation_angle_b > deadzone_rotation_angle) {
+        Serial.printf("angle_b: %d\n", get_angle_b());
         rotation_angle_b = get_angle_b();
     }
   } else if (rotation_angle_b < -deadzone_rotation_angle - 10) {
+    Serial.println("to right");
     turn_right_b();
     while (rotation_angle_b < -deadzone_rotation_angle) {
+        Serial.printf("angle_b: %d\n", get_angle_b());
         rotation_angle_b = get_angle_b();
     }
   }
@@ -346,8 +361,7 @@ int get_wheel_rotation_type() {
 
 int get_target_motor_speed() {
   forward_reversed_data = constrain(controller.getChannel(SPEED_CHANNEL), MIN_CHANNEL_VALUE, MAX_CHANNEL_VALUE);
-  forward_reversed_datasensor_f angle1: -2136
- = map(forward_reversed_data, MIN_CHANNEL_VALUE, MAX_CHANNEL_VALUE, 0, MAX_MOTOR_SPEED) * direction;
+  forward_reversed_data = map(forward_reversed_data, MIN_CHANNEL_VALUE, MAX_CHANNEL_VALUE, 0, MAX_MOTOR_SPEED) * direction;
   return apply_deadzone(forward_reversed_data, DEADZONE_MOTOR_SPEED, STOP_MOTOR_SPEED);
 }
 
@@ -406,11 +420,12 @@ bool rotation_is_changed(int value, int target_value) {
 }
 
 void set_rotation(int rotation_speed) {
-  // bool rotation_is_calibrated = abs(rotation_angle_f - rotation_angle_b) < max_angle_difference;
-  bool rotation_is_calibrated = true;
   if (inverse_wheel_rotation) {
     rotation_angle_b = -rotation_angle_b;
   }
+
+  // bool rotation_is_calibrated = abs(rotation_angle_f - rotation_angle_b) < max_angle_difference;
+  bool rotation_is_calibrated = true;
 
   if (rotation_is_calibrated) {
     if (rotation_speed == 0 || rotation_angle_is_too_high(rotation_speed, rotation_angle_f, rotation_angle_b)) {
@@ -440,6 +455,10 @@ bool rotation_angle_is_too_high(int rotation_speed, int rotation_angle_1, int ro
 void calibrate_rotation(int rotation_speed) {
   if (rotation_speed > 0) {
     if (rotation_angle_f > rotation_angle_b) {
+      if (inverse_wheel_rotation) {
+        turn_left_b();
+        return;
+      }
       turn_right_b();
       return;
     }
@@ -447,6 +466,10 @@ void calibrate_rotation(int rotation_speed) {
     return;
   }
   if (rotation_angle_f < rotation_angle_b) {
+    if (inverse_wheel_rotation) {
+      turn_right_b();
+      return;
+    }
     turn_left_b();
     return;
   }
@@ -459,9 +482,9 @@ void update_led() {
   if (braking) {
     led_braking();
   }
-  if (current_rotation_speed > 0) {
+  if (rotation_angle_f > 200) {
     led_turn_right();
-  } else if (current_rotation_speed < 0) {
+  } else if (rotation_angle_f < -200) {
     led_turn_left();
   }
   all_leds_show();
